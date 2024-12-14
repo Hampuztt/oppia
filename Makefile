@@ -50,6 +50,15 @@ run-devserver: ## Runs the dev-server
 # TODO(#19888): Implement a more efficient method for connecting the folders rather than resorting to copying using docker cp.
 	docker compose up angular-build -d
 	$(MAKE) update.package
+# Checks if there are syntax errors in Typescript build. Avoids infinite loop in start-devserver
+	@docker exec oppia-angular-build bash -c "npx tsc --noEmit"; \
+	EXIT_CODE=$$?; \
+	if [ $$EXIT_CODE -ne 0 ]; then \
+		echo ""; \
+		echo "Error: TypeScript syntax errors detected."; \
+		echo "Please fix the errors found above and in docker logs oppia-angular-build"; \
+		exit $$EXIT_CODE; \
+	fi
 	docker cp oppia-angular-build:/app/oppia/node_modules .
 	docker compose stop angular-build
 	docker compose up dev-server -d --no-deps
@@ -75,6 +84,8 @@ start-devserver: ## Starts the development server
 	@echo 'Please visit http://localhost:8181 to access the development server.'
 	@echo 'Check dev-server logs using "make logs.dev-server"'
 	@echo 'Stop the development server using "make stop"'
+
+
 
 install_hooks:  ## Install required hooks
 	bash ./docker/pre_push_hook.sh --install
